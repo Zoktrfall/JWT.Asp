@@ -16,16 +16,22 @@ namespace WebApplication1.Controllers
     {
         private readonly string _connectionString;
         private readonly string _tokenString;
+        private readonly string _issuerString;
+        private readonly string _audienceString;
+        
 
         public UserDataController(IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")!;
-            _tokenString = configuration.GetSection("AppSettings:Token").Value!;
+            _tokenString = configuration.GetSection("Jwt:Key").Value!;
+            _issuerString = configuration.GetSection("Jwt:Issuer").Value!;
+            _audienceString = configuration.GetSection("Jwt:Audience").Value!;
         }
 
         [HttpPost("Registration")]
         public async Task<IActionResult> Registration([FromBody] UserRegistration user)
         {
+            
             string query = "INSERT INTO UserData (FirstName, LastName, Email, HashPassword, CreatedDate) " +
                            "VALUES (@FirstName, @LastName, @Email, @HashPassword, @CreatedDate)";
 
@@ -89,15 +95,19 @@ namespace WebApplication1.Controllers
             }
         }
         
-        [Authorize]
+        
         [HttpGet("GetUserData")]
+        [Authorize]
         public IActionResult GetUserData()
         {
-            if (User.Identity.IsAuthenticated)
-                return Ok(new { Message = "This is secure data, accessible only for authenticated users." });
-            else
-                return Unauthorized();
+            if (!User.Identity.IsAuthenticated)
+            {
+                return Unauthorized("User is not authenticated.");
+            }
+
+            return Ok(new { Message = "This is secure data, accessible only for authenticated users." });
         }
+
 
 
         private string CreateToken(string firstName, string email)
@@ -111,6 +121,8 @@ namespace WebApplication1.Controllers
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_tokenString));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
+                _issuerString,
+                _audienceString,
                 claims: claims,
                 expires: DateTime.Now.AddDays(1),
                 signingCredentials: creds
