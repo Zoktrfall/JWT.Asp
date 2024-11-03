@@ -51,7 +51,7 @@ namespace WebApplication1.Controllers
                 }
             }
 
-            string token = CreateToken(user.FirstName, user.Email);
+            string token = GenerateToken(user.FirstName, user.Email);
             return Ok(new { Token = token, Message = "User registered and token generated successfully." });
         }
 
@@ -82,7 +82,7 @@ namespace WebApplication1.Controllers
 
                             if (BCrypt.Net.BCrypt.Verify(user.Password, userData.HashPassword))
                             {
-                                var token = CreateToken(userData.FirstName, userData.Email);
+                                var token = GenerateToken(userData.FirstName, userData.Email);
                                 return Ok(new { Token = token, Message = "User Login successfully." });
                             }
                             else
@@ -95,7 +95,6 @@ namespace WebApplication1.Controllers
             }
         }
         
-        
         [HttpGet("GetUserData")]
         [Authorize]
         public IActionResult GetUserData()
@@ -107,10 +106,8 @@ namespace WebApplication1.Controllers
 
             return Ok(new { Message = "This is secure data, accessible only for authenticated users." });
         }
-
-
-
-        private string CreateToken(string firstName, string email)
+        
+        private string GenerateToken(string firstName, string email)
         {
             List<Claim> claims = new List<Claim>
             {
@@ -121,8 +118,8 @@ namespace WebApplication1.Controllers
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_tokenString));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(
-                _issuerString,
-                _audienceString,
+                issuer: _issuerString,
+                audience: _audienceString,
                 claims: claims,
                 expires: DateTime.Now.AddDays(1),
                 signingCredentials: creds
